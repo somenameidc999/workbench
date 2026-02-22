@@ -1,0 +1,15 @@
+{
+    "name": "@toolbox/recharge",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "mcp": "bun run src/mcp-server.ts"
+    },
+    "dependencies": {
+        "@cloudflare/codemode": "latest",
+        "@modelcontextprotocol/sdk": "^1.26.0",
+        "@toolbox/core": "workspace:*",
+        "ai": "latest",
+        "zod": "^4.0.0"
+    }
+}

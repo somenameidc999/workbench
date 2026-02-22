@@ -1,0 +1,17 @@
+query GetOrder($id: ID!) {
+  order(id: $id) {
+    id
+    legacyResourceId
+    name
+    email
+    createdAt
+    displayFinancialStatus
+    displayFulfillmentStatus
+    currentTotalPriceSet {
+      shopMoney {
+        amount
+        currencyCode
+      }
+    }
+  }
+}

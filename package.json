@@ -1,0 +1,26 @@
+{
+  "name": "workbench",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "mcp:start": "bun run packages/orchestrator/src/index.ts",
+    "mcp:dev": "bun --hot run packages/orchestrator/src/index.ts",
+    "mcp:list": "bun run packages/orchestrator/src/list-servers.ts",
+    "mcp:inspect": "bunx @modelcontextprotocol/inspector -- bun run packages/orchestrator/src/index.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "devDependencies": {
+    "@toolbox/core": "workspace:*",
+    "@toolbox/database": "workspace:*",
+    "@toolbox/orchestrator": "workspace:*",
+    "@toolbox/recharge": "workspace:*",
+    "@toolbox/shopify-admin": "workspace:*",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

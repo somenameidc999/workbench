@@ -1,0 +1,17 @@
+{
+  "name": "@toolbox/shopify-admin",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "mcp": "bun run src/mcp-server.ts",
+    "fetch-schema": "bun scripts/fetch-schema.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@toolbox/core": "workspace:*",
+    "zod": "^4.0.0"
+  },
+  "optionalDependencies": {
+    "localtunnel": "^2.0.2"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@toolbox/orchestrator",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun --hot run src/index.ts",
+    "list-servers": "bun run src/list-servers.ts"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "^0.54.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@toolbox/core": "workspace:*",
+    "zod": "^4.0.0"
+  }
+}
