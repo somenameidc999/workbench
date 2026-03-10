@@ -9,6 +9,7 @@
     "mcp:dev": "bun --hot run packages/orchestrator/src/index.ts",
     "mcp:list": "bun run packages/orchestrator/src/list-servers.ts",
     "mcp:inspect": "bunx @modelcontextprotocol/inspector -- bun run packages/orchestrator/src/index.ts",
+    "deploy": "shopify app deploy",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },

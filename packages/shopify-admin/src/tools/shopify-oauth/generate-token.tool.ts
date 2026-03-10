@@ -1,8 +1,15 @@
 import { createTunnelProvider } from "../../utils/shopify-oauth/tunnel.js";
 import { startOAuthServer } from "../../utils/shopify-oauth/oauth-server.js";
 import { createTokenStore } from "../../utils/shopify-oauth/token-store/index.js";
-import { AppConfigStore } from "../../utils/shopify-oauth/config.js";
+import { AppConfigStore, getAppsDir } from "../../utils/shopify-oauth/config.js";
+import type { AppConfig } from "../../utils/shopify-oauth/config.js";
 import type { TunnelProviderName } from "../../utils/shopify-oauth/tunnel.js";
+import { join } from "node:path";
+import {
+  ensureTomlWithRedirectUrl,
+  deployAppConfig,
+  slugifyAppName,
+} from "../../utils/shopify-cli/deploy-redirect.js";
 
 const tokenStore = createTokenStore();
 const appConfigStore = new AppConfigStore();
@@ -14,7 +21,10 @@ export interface GenerateTokenArgs {
   api_secret?: string;
   scopes?: string;
   tunnel_provider?: TunnelProviderName;
+  port?: number;
   timeout_seconds?: number;
+  toml_config_path?: string;
+  auto_deploy?: boolean;
 }
 
 export async function handleGenerateToken(args: GenerateTokenArgs): Promise<{
@@ -25,10 +35,11 @@ export async function handleGenerateToken(args: GenerateTokenArgs): Promise<{
   let apiSecret: string;
   let scopes: string;
   let appName: string;
+  let appConfig: AppConfig | null = null;
 
   if (args.app_name) {
-    const config = await appConfigStore.get(args.app_name);
-    if (!config) {
+    appConfig = await appConfigStore.get(args.app_name);
+    if (!appConfig) {
       return {
         content: [
           {
@@ -42,9 +53,9 @@ export async function handleGenerateToken(args: GenerateTokenArgs): Promise<{
         isError: true,
       };
     }
-    apiKey = config.api_key;
-    apiSecret = config.api_secret;
-    scopes = args.scopes ?? config.scopes;
+    apiKey = appConfig.api_key;
+    apiSecret = appConfig.api_secret;
+    scopes = args.scopes ?? appConfig.scopes;
     appName = args.app_name;
   } else if (args.api_key && args.api_secret) {
     apiKey = args.api_key;
@@ -86,24 +97,25 @@ export async function handleGenerateToken(args: GenerateTokenArgs): Promise<{
     };
   }
 
-  const tunnelProvider = createTunnelProvider(
-    args.tunnel_provider ?? "cloudflared"
-  );
+  const providerName = args.tunnel_provider ?? "cloudflared";
+  const tunnelProvider = createTunnelProvider(providerName);
   let oauthServer: Awaited<ReturnType<typeof startOAuthServer>> | null = null;
 
   try {
     const timeoutMs = (args.timeout_seconds ?? 120) * 1000;
 
+    const port = args.port ?? 0;
+
     const tempServer = Bun.serve({
-      port: 0,
+      port,
       fetch() {
         return new Response("init");
       },
     });
-    const port = tempServer.port;
+    const resolvedPort = tempServer.port;
     tempServer.stop();
 
-    const tunnelUrl = await tunnelProvider.start(port);
+    const tunnelUrl = await tunnelProvider.start(resolvedPort);
 
     oauthServer = await startOAuthServer({
       port,
@@ -116,12 +128,35 @@ export async function handleGenerateToken(args: GenerateTokenArgs): Promise<{
     });
 
     const redirectUri = `${tunnelUrl}/auth/callback`;
+
+    const tomlPath = args.toml_config_path
+      ?? appConfig?.toml_config_path
+      ?? join(getAppsDir(), `shopify.app.${slugifyAppName(appName)}.toml`);
+    const shouldDeploy = args.auto_deploy !== false;
+
+    if (shouldDeploy) {
+      console.error(`\n📝 Updating TOML redirect_urls: ${redirectUri}`);
+      await ensureTomlWithRedirectUrl(tomlPath, redirectUri, {
+        clientId: apiKey,
+        appName: appName,
+        scopes: scopes,
+      });
+      console.error("🚀 Deploying app config to register redirect URL...");
+      const deployOutput = await deployAppConfig(tomlPath);
+      console.error(`✅ Redirect URL registered with Shopify`);
+      if (deployOutput) {
+        console.error(`   ${deployOutput.split("\n")[0]}`);
+      }
+    }
+
     console.error("\n🔗 OAuth URL (open in browser):");
     console.error(`   ${oauthServer.oauthUrl}`);
-    console.error("\n⚠️  If you see 'Unauthorized Access' from Shopify:");
-    console.error("   Add this EXACT URL to your app's Allowed redirection URL(s) in Partners:");
-    console.error("   App → Configuration → URLs → Allowed redirection URL(s)");
-    console.error(`   ${redirectUri}`);
+    if (!shouldDeploy) {
+      console.error("\n⚠️  If you see 'Unauthorized Access' from Shopify:");
+      console.error("   Add this EXACT URL to your app's Allowed redirection URL(s) in Partners:");
+      console.error("   App → Configuration → URLs → Allowed redirection URL(s)");
+      console.error(`   ${redirectUri}`);
+    }
     console.error(`\n⏳ Waiting for OAuth callback (${args.timeout_seconds ?? 120}s timeout)...\n`);
 
     const tokenResponse = await oauthServer.tokenPromise;

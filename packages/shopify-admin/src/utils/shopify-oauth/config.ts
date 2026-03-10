@@ -8,7 +8,7 @@ export interface AppConfig {
   scopes: string;
 }
 
-function getAppsDir(): string {
+export function getAppsDir(): string {
   const base =
     process.env.SHOPIFY_MCP_DATA_DIR ?? join(process.env.HOME ?? "~", ".shopify-mcp");
   return join(base, "apps");

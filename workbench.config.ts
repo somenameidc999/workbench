@@ -1,10 +1,24 @@
 export default {
   stores: [
-    {
-      "name": "seed-staging",
-      "client_id": process.env.SEED_STAGING_APP_CLIENT_ID ?? "",
-      "client_secret": process.env.SEED_STAGING_APP_CLIENT_SECRET ?? "",
-    },
+    ...(process.env.SEED_DEV_STORE_APP_CLIENT_ID
+      ?
+      [
+        {
+          "name": "seed-dev-store",
+          "client_id": process.env.SEED_DEV_STORE_APP_CLIENT_ID ?? "",
+          "client_secret": process.env.SEED_DEV_STORE_APP_CLIENT_SECRET ?? "",
+        }
+      ] : []),
+    ...(process.env.SEED_STAGING_APP_CLIENT_ID
+      ?
+      [
+        {
+          "name": "seed-staging",
+          "client_id": process.env.SEED_STAGING_APP_CLIENT_ID ?? "",
+          "client_secret": process.env.SEED_STAGING_APP_CLIENT_SECRET ?? "",
+        }
+      ]
+      : []),
     ...(process.env.ITALIST_SHOP_APP_CLIENT_ID
       ?
       [

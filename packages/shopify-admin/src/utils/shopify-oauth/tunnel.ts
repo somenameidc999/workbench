@@ -8,7 +8,9 @@ export interface TunnelProvider {
 
 export type TunnelProviderName = "cloudflared" | "localtunnel";
 
-export function createTunnelProvider(name: TunnelProviderName): TunnelProvider {
+export function createTunnelProvider(
+  name: TunnelProviderName,
+): TunnelProvider {
   switch (name) {
     case "cloudflared":
       return new CloudflaredTunnel();
