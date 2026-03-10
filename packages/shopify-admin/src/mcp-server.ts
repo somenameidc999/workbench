@@ -1,10 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { handleGenerateToken } from "./tools/shopify-oauth/generate-token.tool";
-import { handleConfigureApp } from "./tools/shopify-oauth/configure-app.tool";
-import { handleGetStoredToken } from "./tools/shopify-oauth/get-token.tool";
-import { handleListTokens } from "./tools/shopify-oauth/list-tokens.tool";
+import { handleGetAccessToken } from "./tools/get-access-token.tool";
 import { handleSearch } from "./tools/code-mode/search.tool";
 import { handleExecute } from "./tools/code-mode/execute.tool";
 
@@ -13,62 +10,11 @@ const server = new McpServer({
   version: "0.0.1",
 });
 
-// Shopify OAuth tools
-const shopifyGenerateTokenInputSchema = {
-  shop: z.string().describe("Shopify store domain (e.g. my-store.myshopify.com)"),
-  app_name: z
-    .string()
-    .optional()
-    .describe(
-      "Name of a previously configured app (via shopify_configure_app). Mutually exclusive with inline credentials."
-    ),
-  api_key: z
-    .string()
-    .optional()
-    .describe(
-      "Shopify app Client ID. Use for one-off token generation without saving app config."
-    ),
-  api_secret: z.string().optional().describe("Shopify app Client Secret."),
-  scopes: z
-    .string()
-    .optional()
-    .describe(
-      "Comma-separated OAuth scopes (e.g. read_products,write_orders). Defaults to app config scopes."
-    ),
-  tunnel_provider: z
-    .enum(["cloudflared", "localtunnel"])
-    .optional()
-    .describe(
-      "Tunnel provider. Default: cloudflared (requires cloudflared CLI installed)."
-    ),
-  timeout_seconds: z
-    .number()
-    .optional()
-    .describe("How long to wait for OAuth completion. Default: 120."),
-} satisfies Record<string, z.ZodType>;
-
-const shopifyConfigureAppInputSchema = {
-  app_name: z
-    .string()
-    .describe("Unique name for this app config (e.g. italist-admin)"),
-  api_key: z.string().describe("Shopify app Client ID from Partners Dashboard"),
-  api_secret: z.string().describe("Shopify app Client Secret from Partners Dashboard"),
-  scopes: z
-    .string()
-    .describe(
-      "Default OAuth scopes, comma-separated (e.g. read_products,write_products,read_orders,write_orders)"
-    ),
-} satisfies Record<string, z.ZodType>;
-
-const shopifyGetStoredTokenInputSchema = {
-  shop: z.string().describe("Shopify store domain"),
-} satisfies Record<string, z.ZodType>;
-
-const shopifyListTokensInputSchema = {
-  app_name: z
-    .string()
-    .optional()
-    .describe("Filter by app name. Omit to list all."),
+// Shopify access token tool (client_credentials grant via workbench.config.ts)
+const shopifyGetAccessTokenInputSchema = {
+  shop: z.string().describe(
+    "Store name from workbench.config.ts (e.g. 'seed-dev-store') or full domain (e.g. 'seed-dev-store.myshopify.com'). The store must have client_id and client_secret configured."
+  ),
 } satisfies Record<string, z.ZodType>;
 
 // Type assertions avoid "excessively deep" inference from SDK's Zod generics (config + callback).
@@ -82,43 +28,13 @@ const register = (name: string, config: ToolConfig, handler: (args: any) => Prom
   server.registerTool(name, config as ToolConfig, handler as never);
 
 register(
-  "shopify_generate_access_token",
+  "shopify_get_access_token",
   {
     description:
-      "Generate a Shopify Admin API offline access token via OAuth for a custom distribution app. Starts a temporary tunnel, prints an OAuth URL to stderr for the user to open and approve, then captures and stores the token. If Shopify shows 'Unauthorized Access', add the printed redirect URL to your app's Allowed redirection URL(s) in Partners (App → Configuration → URLs). Requires shopify_configure_app first, OR inline api_key + api_secret.",
-    inputSchema: shopifyGenerateTokenInputSchema,
+      "Get a Shopify Admin API access token for a store using client_credentials grant. Reads client_id and client_secret from workbench.config.ts. Tokens are cached for ~1 hour. Pass the store name from config (e.g. 'seed-dev-store') or full domain.",
+    inputSchema: shopifyGetAccessTokenInputSchema,
   } as ToolConfig,
-  handleGenerateToken as never
-);
-
-register(
-  "shopify_configure_app",
-  {
-    description:
-      "Store Shopify app credentials for reuse. Credentials are saved locally so you don't need to provide api_key/api_secret on every token generation call.",
-    inputSchema: shopifyConfigureAppInputSchema,
-  } as ToolConfig,
-  handleConfigureApp as never
-);
-
-register(
-  "shopify_get_stored_token",
-  {
-    description:
-      "Retrieve a stored Shopify access token for a specific app and shop.",
-    inputSchema: shopifyGetStoredTokenInputSchema,
-  } as ToolConfig,
-  handleGetStoredToken as never
-);
-
-register(
-  "shopify_list_tokens",
-  {
-    description:
-      "List all stored Shopify access tokens, optionally filtered by app name.",
-    inputSchema: shopifyListTokensInputSchema,
-  } as ToolConfig,
-  handleListTokens as never
+  handleGetAccessToken as never
 );
 
 // Code Mode tools — search + execute

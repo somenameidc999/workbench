@@ -9,6 +9,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@toolbox/core": "workspace:*",
+    "smol-toml": "^1.6.0",
     "zod": "^4.0.0"
   },
   "optionalDependencies": {
