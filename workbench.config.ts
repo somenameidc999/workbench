@@ -38,5 +38,14 @@ export default {
         }
       ]
       : []),
+    ...(process.env.SEED_DEV_STORE_RECHARGE_API_TOKEN
+      ?
+      [
+        {
+          "name": "recharge-seed-dev-store",
+          "access_token": process.env.SEED_DEV_STORE_RECHARGE_API_TOKEN ?? "",
+        }
+      ]
+      : []),
   ],
 };

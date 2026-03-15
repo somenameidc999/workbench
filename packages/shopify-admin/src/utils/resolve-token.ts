@@ -37,7 +37,7 @@ function isClientCredentialsTokenFresh(token: StoredToken): boolean {
 async function findOAuthCredentials(
   requestedShop: string,
   normalizedShopDomain: string,
-): Promise<{ clientId: string; clientSecret: string } | null> {
+): Promise<{ clientId: string; clientSecret: string; domain: string } | null> {
   const storeIds = await listStoreIds();
 
   for (const storeId of storeIds) {
@@ -51,7 +51,7 @@ async function findOAuthCredentials(
         storeId === requestedShop || storeIdAsDomain === normalizedShopDomain;
 
       if (matchesByDomain || matchesByName) {
-        return { clientId: creds.clientId, clientSecret: creds.clientSecret };
+        return { clientId: creds.clientId, clientSecret: creds.clientSecret, domain: creds.domain };
       }
     } catch {
       // Skip misconfigured entries and keep searching other stores.
@@ -67,6 +67,7 @@ async function findOAuthCredentials(
  */
 export async function resolveAccessToken(
   shop: string,
+  options?: { forceNew?: boolean },
 ): Promise<{
   accessToken: string;
   shopDomain: string;
@@ -75,19 +76,23 @@ export async function resolveAccessToken(
   const shopDomain = domainToShop(shop);
   const failureReasons: string[] = [];
 
+  const forceNew = options?.forceNew ?? false;
+
   const creds = await findOAuthCredentials(shop, shopDomain);
   if (creds) {
-    const cachedClientToken = await tokenStore.get(shopDomain, "client_credentials");
-    if (cachedClientToken?.access_token && isClientCredentialsTokenFresh(cachedClientToken)) {
-      return {
-        accessToken: cachedClientToken.access_token,
-        shopDomain,
-        tokenType: "client_credentials",
-      };
+    if (!forceNew) {
+      const cachedClientToken = await tokenStore.get(shopDomain, "client_credentials");
+      if (cachedClientToken?.access_token && isClientCredentialsTokenFresh(cachedClientToken)) {
+        return {
+          accessToken: cachedClientToken.access_token,
+          shopDomain,
+          tokenType: "client_credentials",
+        };
+      }
     }
 
     try {
-      const accessToken = await getAccessToken(shopDomain, creds.clientId, creds.clientSecret);
+      const accessToken = await getAccessToken(creds.domain, creds.clientId, creds.clientSecret);
       if (accessToken) {
         const now = Date.now();
         const createdAt = new Date(now).toISOString();

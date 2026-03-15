@@ -3,6 +3,7 @@ import { listStoreIds } from "@toolbox/core";
 
 export interface GetAccessTokenArgs {
   shop: string;
+  force_new?: boolean;
 }
 
 export async function handleGetAccessToken(args: GetAccessTokenArgs): Promise<{
@@ -10,7 +11,7 @@ export async function handleGetAccessToken(args: GetAccessTokenArgs): Promise<{
   isError?: boolean;
 }> {
   try {
-    const result = await resolveAccessToken(args.shop);
+    const result = await resolveAccessToken(args.shop, { forceNew: args.force_new });
     return {
       content: [
         {
