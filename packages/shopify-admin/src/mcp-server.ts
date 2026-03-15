@@ -15,6 +15,9 @@ const shopifyGetAccessTokenInputSchema = {
   shop: z.string().describe(
     "Store name from workbench.config.ts (e.g. 'seed-dev-store') or full domain (e.g. 'seed-dev-store.myshopify.com'). The store must have client_id and client_secret configured."
   ),
+  force_new: z.boolean().optional().describe(
+    "When true, skip the cached token and get a new access token from Shopify. Defaults to false."
+  ),
 } satisfies Record<string, z.ZodType>;
 
 // Type assertions avoid "excessively deep" inference from SDK's Zod generics (config + callback).
